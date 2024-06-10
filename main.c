@@ -12,13 +12,18 @@
 
 #define TARGET_FPS 60
 #define FRAME_DURATION (1.0f / TARGET_FPS)
-#define TIME_SCALE 0.001f
+#define TIME_SCALE 0.01f
+
+#define TRAIL_POINTS 200
 
 typedef struct {
     sfCircleShape* shape;
     sfVector2f position;
     sfVector2f velocity;
     float mass;
+    sfVertexArray *trail;
+    sfVector2f trailPoints[TRAIL_POINTS];
+    int trailIndex;
 } Planet;
 
 void initializePlanets(Planet planets[]) {
@@ -30,6 +35,9 @@ void initializePlanets(Planet planets[]) {
     sfCircleShape_setFillColor(planets[0].shape, sfYellow);
     sfCircleShape_setOrigin(planets[0].shape, (sfVector2f){ 20, 20 });
     sfCircleShape_setPosition(planets[0].shape, planets[0].position);
+    planets[0].trail = sfVertexArray_create();
+    sfVertexArray_setPrimitiveType(planets[0].trail, sfLineStrip);
+    planets[0].trailIndex = 0;
 
     planets[1].mass = 7.348e18;
     planets[1].position = (sfVector2f){ WINDOW_WIDTH / 2 + 200, WINDOW_HIGHT / 2 };
@@ -39,6 +47,9 @@ void initializePlanets(Planet planets[]) {
     sfCircleShape_setFillColor(planets[1].shape, sfGreen);
     sfCircleShape_setOrigin(planets[1].shape, (sfVector2f){ 10, 10 });
     sfCircleShape_setPosition(planets[1].shape, planets[1].position);
+    planets[1].trail = sfVertexArray_create();
+    sfVertexArray_setPrimitiveType(planets[1].trail, sfLineStrip);
+    planets[1].trailIndex = 0;
 }
 
 sfVector2f calculateGravitationalForce(Planet *p1, Planet *p2) {
@@ -68,6 +79,16 @@ void updatePlanets(Planet planets[], float dt) {
         planets[i].position.x += planets[i].velocity.x * dt;
         planets[i].position.y += planets[i].velocity.y * dt;
         sfCircleShape_setPosition(planets[i].shape, planets[i].position);
+
+        planets[i].trailPoints[planets[i].trailIndex] = planets[i].position;
+        planets[i].trailIndex = (planets[i].trailIndex + 1) % TRAIL_POINTS;
+        
+        sfVertexArray_clear(planets[i].trail);
+        for (int k = 0; k < TRAIL_POINTS; k++) {
+            int index = (planets[i].trailIndex + k) % TRAIL_POINTS;
+            sfVertex vertex = { .position = planets[i].trailPoints[index], .color = sfColor_fromRGBA(103, 242, 209, 128) };
+            sfVertexArray_append(planets[i].trail, vertex);
+        }
     }
 }
 
@@ -101,6 +122,7 @@ int main(void) {
 
         sfRenderWindow_clear(window, sfBlack);
         for (int i = 0; i < PLANET_COUNT; i++) {
+            sfRenderWindow_drawVertexArray(window, planets[i].trail, NULL);
             sfRenderWindow_drawCircleShape(window, planets[i].shape, NULL);
         }
         sfRenderWindow_display(window);
@@ -118,6 +140,7 @@ int main(void) {
 
     for (int i = 0; i < PLANET_COUNT; i++) {
         sfCircleShape_destroy(planets[i].shape);
+        sfVertexArray_destroy(planets[i].trail);
     }
 
     sfClock_destroy(clock);

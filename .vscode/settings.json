@@ -1,0 +1,10 @@
+{
+    "makefile.makePath": "C:\\MinGW\\bin\\mingw32-make",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "d:\\Dev\\PlanetSim\\bin",
+            "binaryPath": "d:\\Dev\\PlanetSim\\bin\\main",
+            "binaryArgs": []
+        }
+    ]
+}
