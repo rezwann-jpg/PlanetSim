@@ -1,4 +1,5 @@
 #include "include/SFML/Graphics.h"
+#include "include/SFML/System.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -12,7 +13,7 @@
 
 #define TARGET_FPS 60
 #define FRAME_DURATION (1.0f / TARGET_FPS)
-#define TIME_SCALE 0.01f
+#define TIME_SCALE 0.005f
 
 #define TRAIL_POINTS 200
 
@@ -24,9 +25,10 @@ typedef struct {
     sfVertexArray *trail;
     sfVector2f trailPoints[TRAIL_POINTS];
     int trailIndex;
+    sfText *infoText;
 } Planet;
 
-void initializePlanets(Planet planets[]) {
+void initializePlanets(Planet planets[], sfFont *font) {
     planets[0].mass = 5.972e20;
     planets[0].position = (sfVector2f){ WINDOW_WIDTH / 2, WINDOW_HIGHT / 2 };
     planets[0].velocity = (sfVector2f){ 0, 0 };
@@ -38,6 +40,10 @@ void initializePlanets(Planet planets[]) {
     planets[0].trail = sfVertexArray_create();
     sfVertexArray_setPrimitiveType(planets[0].trail, sfLineStrip);
     planets[0].trailIndex = 0;
+    planets[0].infoText = sfText_create();
+    sfText_setFont(planets[0].infoText, font);
+    sfText_setCharacterSize(planets[0].infoText, 14);
+    sfText_setFillColor(planets[0].infoText, sfWhite);
 
     planets[1].mass = 7.348e18;
     planets[1].position = (sfVector2f){ WINDOW_WIDTH / 2 + 200, WINDOW_HIGHT / 2 };
@@ -50,6 +56,10 @@ void initializePlanets(Planet planets[]) {
     planets[1].trail = sfVertexArray_create();
     sfVertexArray_setPrimitiveType(planets[1].trail, sfLineStrip);
     planets[1].trailIndex = 0;
+    planets[1].infoText = sfText_create();
+    sfText_setFont(planets[1].infoText, font);
+    sfText_setCharacterSize(planets[1].infoText, 14);
+    sfText_setFillColor(planets[1].infoText, sfWhite);
 }
 
 sfVector2f calculateGravitationalForce(Planet *p1, Planet *p2) {
@@ -64,6 +74,7 @@ sfVector2f calculateGravitationalForce(Planet *p1, Planet *p2) {
 }
 
 void updatePlanets(Planet planets[], float dt) {
+    char info[128];
     for (int i = 0; i < PLANET_COUNT; i++) {
         sfVector2f totalForce = { 0, 0 };
         for (int j = 0; j < PLANET_COUNT; j++) {
@@ -89,6 +100,10 @@ void updatePlanets(Planet planets[], float dt) {
             sfVertex vertex = { .position = planets[i].trailPoints[index], .color = sfColor_fromRGBA(103, 242, 209, 128) };
             sfVertexArray_append(planets[i].trail, vertex);
         }
+
+        snprintf(info, sizeof(info), "Pos: (%.2f, %.2f)\nVel: (%.2f, %.2f)\n", planets[i].position.x, planets[i].position.y, planets[i].velocity.x, planets[i].velocity.y);
+        sfText_setString(planets[i].infoText, info);
+        sfText_setPosition(planets[i].infoText, (sfVector2f){ planets[i].position.x + 20, planets[i].position.y + 20 });
     }
 }
 
@@ -104,8 +119,13 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
+    sfFont *font = sfFont_createFromFile("Helvetica.ttf");
+    if (!font) {
+        return EXIT_FAILURE;
+    }
+
     Planet planets[PLANET_COUNT];
-    initializePlanets(planets);
+    initializePlanets(planets, font);
 
     sfClock *clock = sfClock_create();
     sfClock *frameClock = sfClock_create();
@@ -124,6 +144,7 @@ int main(void) {
         for (int i = 0; i < PLANET_COUNT; i++) {
             sfRenderWindow_drawVertexArray(window, planets[i].trail, NULL);
             sfRenderWindow_drawCircleShape(window, planets[i].shape, NULL);
+            sfRenderWindow_drawText(window, planets[i].infoText, NULL);
         }
         sfRenderWindow_display(window);
 
@@ -141,8 +162,10 @@ int main(void) {
     for (int i = 0; i < PLANET_COUNT; i++) {
         sfCircleShape_destroy(planets[i].shape);
         sfVertexArray_destroy(planets[i].trail);
+        sfText_destroy(planets[i].infoText);
     }
 
+    sfFont_destroy(font);
     sfClock_destroy(clock);
     sfClock_destroy(frameClock);
     sfRenderWindow_destroy(window);
